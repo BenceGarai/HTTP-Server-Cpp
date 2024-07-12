@@ -75,8 +75,11 @@ int main(int argc, char **argv) {
             return -1;
     }
     std::cout << "Client connected\n";
-    int received_buffer = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-    std::cout << "buffer bro: " << received_buffer;
+
+    int received_bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+
+    buffer[received_bytes] = '\0';
+    std::cout << "Received from client: " << buffer << "\n";
 
     std::string ok_message = "HTTP/1.1 200 OK\r\n\r\n";
     send(client_fd, ok_message.c_str(), ok_message.size(), 0);
