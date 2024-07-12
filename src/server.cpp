@@ -78,12 +78,9 @@ int main(int argc, char **argv) {
     }
     std::cout << "Client connected\n";
 
-    // Send message to client
-    if (send(client_fd, OK_MESSAGE.c_str(), OK_MESSAGE.size(), 0) != 0) {
-        std::cout << "Failed to send message";
-        return 1;
-    }
+    send(client_fd, OK_MESSAGE.c_str(), OK_MESSAGE.size(), 0);
 
+    close(client_fd);
     close(server_fd);
 
     return 0;
