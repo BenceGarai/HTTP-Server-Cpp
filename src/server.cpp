@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
 
     char buffer[1024];
 
-    const std::string OK_MESSAGE = "HTTP/1.1 200 OK\r\n\r\n";
+    std::string OK_MESSAGE = "HTTP/1.1 200 OK\r\n\r\n";
 
     // You can use print statements as follows for debugging, they'll be visible when running tests.
     std::cout << "Logs from your program will appear here!\n";
