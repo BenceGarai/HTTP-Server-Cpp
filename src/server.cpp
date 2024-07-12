@@ -10,10 +10,13 @@
 
 
 int main(int argc, char **argv) {
+
     // Flush after every std::cout / std::cerr
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
 
+    std::string ok_message = "HTTP/1.1 200 OK\r\n\r\n";
+    std::string error_message = "HTTP/1.1 404 Not Found\r\n\r\n";
     char buffer[1024];
 
     // You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -83,12 +86,27 @@ int main(int argc, char **argv) {
     std::cout << "Received from client: " << buffer << "\n";
     
     std::string request(buffer);
-    size_t pos = request.find(" ");
-    std::cout << pos;
 
+    size_t method_end = request.find(" ");
+    if (method_end != std::string::npos) {
+        std::string method = request.substr(0, method_end);
+        std::cout << "Method found: " << method;
 
-    std::string ok_message = "HTTP/1.1 200 OK\r\n\r\n";
-    send(client_fd, ok_message.c_str(), ok_message.size(), 0);
+        size_t path_start = method_end + 1;
+        size_t path_end = request.find(" ", path_start);
+
+        if (path_end != std::string::npos) {
+            std::string path = request.substr(path_start, path_end - path_start);
+            std::cout << "Path found: " << path;
+
+            if (method == "GET" && path == "/") {
+                send(client_fd, ok_message.c_str(), ok_message.size(), 0);
+            }
+            else {
+                send(client_fd, error_message.c_str(), error_message.size(), 0);
+            }
+        }
+    }
 
     close(client_fd);
     close(server_fd);
