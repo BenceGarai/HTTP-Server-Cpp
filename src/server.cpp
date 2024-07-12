@@ -17,8 +17,8 @@ int main(int argc, char **argv) {
   std::cout << "Logs from your program will appear here!\n";
 
   
-   int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-   if (server_fd < 0) {
+  int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+  if (server_fd < 0) {
     std::cerr << "Failed to create server socket\n";
     return 1;
    }
@@ -57,5 +57,5 @@ int main(int argc, char **argv) {
   
    close(server_fd);
 
-  return 0;
+   return 0;
 }
