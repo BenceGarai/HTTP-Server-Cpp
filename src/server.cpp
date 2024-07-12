@@ -77,9 +77,15 @@ int main(int argc, char **argv) {
     std::cout << "Client connected\n";
 
     int received_bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-
+    // \0 makes received_bytes be treated as a string
+    // buffer now contains the received  from the client
     buffer[received_bytes] = '\0';
     std::cout << "Received from client: " << buffer << "\n";
+    
+    std::string request(buffer);
+    size_t pos = request.find(" ");
+    std::cout << pos;
+
 
     std::string ok_message = "HTTP/1.1 200 OK\r\n\r\n";
     send(client_fd, ok_message.c_str(), ok_message.size(), 0);
