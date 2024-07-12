@@ -16,8 +16,6 @@ int main(int argc, char **argv) {
 
     char buffer[1024];
 
-    std::string OK_MESSAGE = "HTTP/1.1 200 OK\r\n\r\n";
-
     // You can use print statements as follows for debugging, they'll be visible when running tests.
     std::cout << "Logs from your program will appear here!\n";
 
@@ -77,8 +75,11 @@ int main(int argc, char **argv) {
             return -1;
     }
     std::cout << "Client connected\n";
+    int received_buffer = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+    std::cout << buffer;
 
-    send(client_fd, OK_MESSAGE.c_str(), OK_MESSAGE.size(), 0);
+    std::string ok_message = "HTTP/1.1 200 OK\r\n\r\n";
+    send(client_fd, ok_message.c_str(), ok_message.size(), 0);
 
     close(client_fd);
     close(server_fd);
