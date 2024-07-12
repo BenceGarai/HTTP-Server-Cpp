@@ -8,6 +8,25 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+std::string extractMethod(const std::string& request) {
+    size_t method_end = request.find(" ");
+    if (method_end != std::string::npos) {
+        return request.substr(0, method_end);
+    }
+    return "";
+}
+
+std::string extractPath(const std::string& request) {
+    size_t method_end = request.find(" ");
+    if (method_end != std::string::npos) {
+        size_t path_start = method_end + 1;
+        size_t path_end = request.find(" ", path_start);
+        if (path_end != std::string::npos) {
+            return request.substr(path_start, path_end - path_start); // Extract and return path
+        }
+    }
+    return ""; // Return empty string if not found
+}
 
 int main(int argc, char **argv) {
 
@@ -87,26 +106,16 @@ int main(int argc, char **argv) {
     
     std::string request(buffer);
 
-    size_t method_end = request.find(" ");
-    if (method_end != std::string::npos) {
-        std::string method = request.substr(0, method_end);
-        std::cout << "Method found: " << method;
+    std::string method = extractMethod(request);
+    std::string path = extractPath(request);
 
-        size_t path_start = method_end + 1;
-        size_t path_end = request.find(" ", path_start);
-
-        if (path_end != std::string::npos) {
-            std::string path = request.substr(path_start, path_end - path_start);
-            std::cout << "Path found: " << path;
-
-            if (method == "GET" && path == "/") {
-                send(client_fd, ok_message.c_str(), ok_message.size(), 0);
-            }
-            else {
-                send(client_fd, error_message.c_str(), error_message.size(), 0);
-            }
-        }
+    if (method == "GET" && path == "/") {
+        send(client_fd, ok_message.c_str(), ok_message.size(), 0);
     }
+    else {
+        send(client_fd, error_message.c_str(), error_message.size(), 0);
+    }
+       
 
     close(client_fd);
     close(server_fd);
