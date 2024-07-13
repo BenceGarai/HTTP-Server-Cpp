@@ -8,7 +8,19 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-std::string extrachEcho(const std::string& path) {
+std::string extractHeader(const std::string& request, const std::string& header_name) {
+    size_t header_start = request.find(header_name);
+    if (header_start != std::string::npos) {
+        size_t value_start = header_start + header_name.length();
+        size_t value_end = request.find("\r\n", value_start);
+        if (value_end != std::string::npos) {
+            return request.substr(value_start, value_end - value_start); // Extract and return header value
+        }
+    }
+    return ""; // Return empty string if not found
+}
+
+std::string extractEcho(const std::string& path) {
     return path.substr(6);
 }
 
@@ -60,11 +72,24 @@ void handleClient(int client_fd) {
     }
     else if (method == "GET" && path.rfind("/echo/", 0) == 0) {
         // Echo response
-        std::string echo_message = extrachEcho(path);
+        std::string echo_message = extractEcho(path);
         int conLen = echo_message.length();
         std::string response_message = ok_message + contentType + "Content-Length: " + std::to_string(conLen) + "\r\n\r\n" + echo_message;
         std::cout << "Message sent: " << response_message << "\n";
         send(client_fd, response_message.c_str(), response_message.size(), 0);
+    }
+    else if (method == "GET" && path == "/user-agent") {
+        std::string user_agent = extractHeader(request, "User-Agent: ");
+        if (!user_agent.empty()) {
+            int user_length = user_agent.length();
+            std::string user_agent_response = ok_message + contentType + "Content-Length: " + std::to_string(user_length) + "\r\n\r\n" + user_agent;
+            send(client_fd, user_agent_response.c_str(), user_agent_response.size(), 0);
+        }
+        else {
+            // If User-Agent header not found, send an error response
+            std::string error_response = error_message + contentType + "\r\n";
+            send(client_fd, error_response.c_str(), error_response.size(), 0);
+        }
     }
     else {
         // Error response
