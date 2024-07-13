@@ -28,98 +28,93 @@ std::string extractPath(const std::string& request) {
     return ""; // Return empty string if not found
 }
 
-int main(int argc, char **argv) {
+void handleClient(int client_fd) {
+    std::string ok_message = "HTTP/1.1 200 OK\r\n";
+    std::string error_message = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\r\n";
+    char buffer[1024];
 
-    // Flush after every std::cout / std::cerr
+    int received_bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+    buffer[received_bytes] = '\0';
+    std::cout << "Received from client: " << buffer << "\n";
+
+    std::string request(buffer);
+    std::string method = extractMethod(request);
+    std::cout << "Method extracted: " << method << "\n";
+    std::string path = extractPath(request);
+    std::cout << "Path extracted: " << path << "\n";
+    std::string contentType = "Content-Type: text/plain\r\n";
+    std::cout << "ContentType extracted: " << contentType << "\n";
+
+    if (method == "GET" && path == "/") {
+        std::string response = ok_message + contentType + "\r\n";
+        send(client_fd, response.c_str(), response.size(), 0);
+    }
+    else if (method == "GET" && path.rfind("/echo/", 0) == 0) {
+        int conLen = path.substr(6).length();
+        std::string echo_message = ok_message + contentType + "Content-Length: " + std::to_string(conLen) + "\r\n\r\n" + path.substr(6);
+        std::cout << "Message sent: " << echo_message << "\n";
+        send(client_fd, echo_message.c_str(), echo_message.size(), 0);
+    }
+    else {
+        send(client_fd, error_message.c_str(), error_message.size(), 0);
+    }
+
+    close(client_fd);
+}
+
+int main(int argc, char** argv) {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
 
-    std::string ok_message = "HTTP/1.1 200 OK\r\n\r\n";
-    std::string error_message = "HTTP/1.1 404 Not Found\r\n\r\n";
-
     char buffer[1024];
 
-    // You can use print statements as follows for debugging, they'll be visible when running tests.
     std::cout << "Logs from your program will appear here!\n";
 
-    // Create socket which is assigned to an integer as a file descriptor fd
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) {
         std::cerr << "Failed to create server socket\n";
         return 1;
     }
 
-    // Since the tester restarts your program quite often, setting SO_REUSEADDR
-    // ensures that we don't run into 'Address already in use' errors
     int reuse = 1;
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
         std::cerr << "setsockopt failed\n";
         return 1;
     }
 
-    // sockaddr_in is used to store socket related information used for ipv4 addresses
     struct sockaddr_in server_addr;
-    // Specifies address family in this case : AF_INET which is Ipv4
     server_addr.sin_family = AF_INET;
-    // sin_addr.s_addr hold the IP address for the socket
-    // INADDR_ANY allows the server to accept connections from any IP
     server_addr.sin_addr.s_addr = INADDR_ANY;
-    // Assigning port number for incoming connections
     server_addr.sin_port = htons(4221);
 
     int server_addr_len = sizeof(server_addr);
 
-    // Assossciate socket with the specific addresss (server_addr) above
     if (bind(server_fd, (struct sockaddr*)&server_addr, server_addr_len) != 0) {
         std::cerr << "Failed to bind to port 4221\n";
         return 1;
     }
 
-    // Setting limit of pending connections to 5
     int connection_backlog = 5;
-    // Listen marks the socket as passive to accept incoming connections
-    // returns 0 in success
     if (listen(server_fd, connection_backlog) != 0) {
         std::cerr << "listen failed\n";
         return 1;
     }
 
-    // Store details of the client
     struct sockaddr_in client_addr;
     int client_addr_len = sizeof(client_addr);
 
     std::cout << "Waiting for a client to connect...\n";
 
-    // Accept incoming connections on the socket (server_fd)
-    // Insert client data into client_addr and client_addr_len
-    int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, (socklen_t*)&client_addr_len);
-    if (client_fd < 0) {
-        std::cout << "Failed to accept client.";
-            return -1;
+    while (true) {
+        int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, (socklen_t*)&client_addr_len);
+        if (client_fd < 0) {
+            std::cout << "Failed to accept client.\n";
+            continue;
+        }
+        std::cout << "Client connected\n";
+        handleClient(client_fd);
     }
-    std::cout << "Client connected\n";
 
-    int received_bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-    // \0 makes received_bytes be treated as a string
-    // buffer now contains the received  from the client
-    buffer[received_bytes] = '\0';
-    std::cout << "Received from client: " << buffer << "\n";
-    
-    std::string request(buffer);
-
-    std::string method = extractMethod(request);
-    std::string path = extractPath(request);
-
-    if (method == "GET" && path == "/") {
-        send(client_fd, ok_message.c_str(), ok_message.size(), 0);
-    }
-    else {
-        send(client_fd, error_message.c_str(), error_message.size(), 0);
-    }
-       
-
-    close(client_fd);
     close(server_fd);
-
     return 0;
 }
