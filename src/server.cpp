@@ -36,6 +36,7 @@ int main(int argc, char **argv) {
 
     std::string ok_message = "HTTP/1.1 200 OK\r\n\r\n";
     std::string error_message = "HTTP/1.1 404 Not Found\r\n\r\n";
+
     char buffer[1024];
 
     // You can use print statements as follows for debugging, they'll be visible when running tests.
