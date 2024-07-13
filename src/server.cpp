@@ -30,7 +30,7 @@ std::string extractPath(const std::string& request) {
 
 void handleClient(int client_fd) {
     std::string ok_message = "HTTP/1.1 200 OK\r\n";
-    std::string error_message = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\r\n";
+
     char buffer[1024];
 
     int received_bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
@@ -39,11 +39,8 @@ void handleClient(int client_fd) {
 
     std::string request(buffer);
     std::string method = extractMethod(request);
-    std::cout << "Method extracted: " << method << "\n";
     std::string path = extractPath(request);
-    std::cout << "Path extracted: " << path << "\n";
     std::string contentType = "Content-Type: text/plain\r\n";
-    std::cout << "ContentType extracted: " << contentType << "\n";
 
     if (method == "GET" && path == "/") {
         std::string response = ok_message + contentType + "\r\n";
@@ -56,6 +53,7 @@ void handleClient(int client_fd) {
         send(client_fd, echo_message.c_str(), echo_message.size(), 0);
     }
     else {
+        std::string error_message = "HTTP/1.1 404 Not Found\r\n" + contentType;
         send(client_fd, error_message.c_str(), error_message.size(), 0);
     }
 
