@@ -8,6 +8,14 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+std::string extrachEcho(const std::string& path) {
+    return path.substr(6);
+}
+
+std::string extractContentType(const std::string& request) {
+    return "Content-Type: text/plain\r\n";
+}
+
 std::string extractMethod(const std::string& request) {
     size_t method_end = request.find(" ");
     if (method_end != std::string::npos) {
@@ -30,31 +38,38 @@ std::string extractPath(const std::string& request) {
 
 void handleClient(int client_fd) {
     std::string ok_message = "HTTP/1.1 200 OK\r\n";
+    std::string error_message = "HTTP/1.1 404 Not Found\r\n";
 
     char buffer[1024];
-
     int received_bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
     buffer[received_bytes] = '\0';
     std::cout << "Received from client: " << buffer << "\n";
 
+    // Request
     std::string request(buffer);
+
+    // Extracting data
     std::string method = extractMethod(request);
     std::string path = extractPath(request);
-    std::string contentType = "Content-Type: text/plain\r\n";
+    std::string contentType = extractContentType(request);
 
     if (method == "GET" && path == "/") {
+        // Default message
         std::string response = ok_message + contentType + "\r\n";
         send(client_fd, response.c_str(), response.size(), 0);
     }
     else if (method == "GET" && path.rfind("/echo/", 0) == 0) {
-        int conLen = path.substr(6).length();
-        std::string echo_message = ok_message + contentType + "Content-Length: " + std::to_string(conLen) + "\r\n\r\n" + path.substr(6);
-        std::cout << "Message sent: " << echo_message << "\n";
-        send(client_fd, echo_message.c_str(), echo_message.size(), 0);
+        // Echo response
+        std::string echo_message = extrachEcho(path);
+        int conLen = echo_message.length();
+        std::string response_message = ok_message + contentType + "Content-Length: " + std::to_string(conLen) + "\r\n\r\n" + echo_message;
+        std::cout << "Message sent: " << response_message << "\n";
+        send(client_fd, response_message.c_str(), response_message.size(), 0);
     }
     else {
-        std::string error_message = "HTTP/1.1 404 Not Found\r\n" + contentType;
-        send(client_fd, error_message.c_str(), error_message.size(), 0);
+        // Error response
+        std::string error_response = error_message + contentType + "\r\n";
+        send(client_fd, error_response.c_str(), error_response.size(), 0);
     }
 
     close(client_fd);
@@ -63,8 +78,6 @@ void handleClient(int client_fd) {
 int main(int argc, char** argv) {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
-
-    char buffer[1024];
 
     std::cout << "Logs from your program will appear here!\n";
 
