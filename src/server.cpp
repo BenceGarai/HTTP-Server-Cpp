@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <thread>
 
 std::string extractHeader(const std::string& request, const std::string& header_name) {
     size_t header_start = request.find(header_name);
@@ -148,7 +149,7 @@ int main(int argc, char** argv) {
             continue;
         }
         std::cout << "Client connected\n";
-        handleClient(client_fd);
+        std::thread(handleClient, client_fd).detach(); // Create and detach thread
     }
 
     close(server_fd);
