@@ -10,45 +10,9 @@
 #include <thread>
 #include <fstream>
 
-std::string extractHeader(const std::string& request, const std::string& header_name) {
-    size_t header_start = request.find(header_name);
-    if (header_start != std::string::npos) {
-        size_t value_start = header_start + header_name.length();
-        size_t value_end = request.find("\r\n", value_start);
-        if (value_end != std::string::npos) {
-            return request.substr(value_start, value_end - value_start); // Extract and return header value
-        }
-    }
-    return ""; // Return empty string if not found
-}
-
-std::string extractEcho(const std::string& path) {
-    return path.substr(6);
-}
-
-std::string extractContentType(const std::string& request) {
-    return "Content-Type: text/plain\r\n";
-}
-
-std::string extractMethod(const std::string& request) {
-    size_t method_end = request.find(" ");
-    if (method_end != std::string::npos) {
-        return request.substr(0, method_end);
-    }
-    return "";
-}
-
-std::string extractPath(const std::string& request) {
-    size_t method_end = request.find(" ");
-    if (method_end != std::string::npos) {
-        size_t path_start = method_end + 1;
-        size_t path_end = request.find(" ", path_start);
-        if (path_end != std::string::npos) {
-            return request.substr(path_start, path_end - path_start); // Extract and return path
-        }
-    }
-    return ""; // Return empty string if not found
-}
+std::string extractHeader(const std::string& request, const std::string& header_name);
+std::string extractMethod(const std::string& request);
+std::string extractPath(const std::string& request);
 
 void handleClient(int client_fd, const std::string& dir) {
     std::string ok_message = "HTTP/1.1 200 OK\r\n";
@@ -66,7 +30,7 @@ void handleClient(int client_fd, const std::string& dir) {
     std::string method = extractMethod(request);
     std::string path = extractPath(request);
     std::cout << "Path found: " << path << "\n";
-    std::string contentType = extractContentType(request);
+    std::string contentType = "Content-Type: text/plain\r\n";
 
     if (method == "GET" && path == "/") {
         // Default message
@@ -75,13 +39,14 @@ void handleClient(int client_fd, const std::string& dir) {
     }
     else if (method == "GET" && path.rfind("/echo/", 0) == 0) {
         // Echo response
-        std::string echo_message = extractEcho(path);
+        std::string echo_message = path.substr(6);
         int conLen = echo_message.length();
         std::string response_message = ok_message + contentType + "Content-Length: " + std::to_string(conLen) + "\r\n\r\n" + echo_message;
         std::cout << "Message sent: " << response_message << "\n";
         send(client_fd, response_message.c_str(), response_message.size(), 0);
     }
     else if (method == "GET" && path == "/user-agent") {
+        // User-Agent response
         std::string user_agent = extractHeader(request, "User-Agent: ");
         if (!user_agent.empty()) {
             int user_length = user_agent.length();
@@ -95,7 +60,7 @@ void handleClient(int client_fd, const std::string& dir) {
         }
     }
     else if (method == "GET" && path.rfind("/files/", 0) == 0) {
-        // Files response
+        // File response
         std::string filename = dir + path.substr(7); // Extract the filename
         std::ifstream file(filename, std::ios::binary);
         std::cout << "Here is the filename: " << filename << "\n";
@@ -183,9 +148,43 @@ int main(int argc, char** argv) {
             continue;
         }
         std::cout << "Client connected\n";
-        std::thread(handleClient, client_fd, dir).detach(); // Create and detach thread
+        // Create and detach thread
+        std::thread(handleClient, client_fd, dir).detach();
     }
 
     close(server_fd);
     return 0;
 }
+
+std::string extractHeader(const std::string& request, const std::string& header_name) {
+    size_t header_start = request.find(header_name);
+    if (header_start != std::string::npos) {
+        size_t value_start = header_start + header_name.length();
+        size_t value_end = request.find("\r\n", value_start);
+        if (value_end != std::string::npos) {
+            return request.substr(value_start, value_end - value_start);
+        }
+    }
+    return "";
+}
+
+std::string extractMethod(const std::string& request) {
+    size_t method_end = request.find(" ");
+    if (method_end != std::string::npos) {
+        return request.substr(0, method_end);
+    }
+    return "";
+}
+
+std::string extractPath(const std::string& request) {
+    size_t method_end = request.find(" ");
+    if (method_end != std::string::npos) {
+        size_t path_start = method_end + 1;
+        size_t path_end = request.find(" ", path_start);
+        if (path_end != std::string::npos) {
+            return request.substr(path_start, path_end - path_start);
+        }
+    }
+    return "";
+}
+
