@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <thread>
+#include <fstream>
 
 std::string extractHeader(const std::string& request, const std::string& header_name) {
     size_t header_start = request.find(header_name);
@@ -49,7 +50,7 @@ std::string extractPath(const std::string& request) {
     return ""; // Return empty string if not found
 }
 
-void handleClient(int client_fd) {
+void handleClient(int client_fd, const std::string& dir) {
     std::string ok_message = "HTTP/1.1 200 OK\r\n";
     std::string error_message = "HTTP/1.1 404 Not Found\r\n";
 
@@ -64,6 +65,7 @@ void handleClient(int client_fd) {
     // Extracting data
     std::string method = extractMethod(request);
     std::string path = extractPath(request);
+    std::cout << "Path found: " << path << "\n";
     std::string contentType = extractContentType(request);
 
     if (method == "GET" && path == "/") {
@@ -92,6 +94,31 @@ void handleClient(int client_fd) {
             send(client_fd, error_response.c_str(), error_response.size(), 0);
         }
     }
+    else if (method == "GET" && path.rfind("/files/", 0) == 0) {
+        // Files response
+        std::string filename = dir + path.substr(7); // Extract the filename
+        std::ifstream file(filename, std::ios::binary);
+        std::cout << "Here is the filename: " << filename << "\n";
+
+        if (file) {
+            file.seekg(0, std::ios::end);
+            std::streamsize file_size = file.tellg();
+            file.seekg(0, std::ios::beg);
+
+            std::string response_message = ok_message + "Content-Type: application/octet-stream\r\n" + "Content-Length: " + std::to_string(file_size) + "\r\n\r\n";
+            send(client_fd, response_message.c_str(), response_message.size(), 0);
+
+            char file_buffer[1024];
+            while (file.read(file_buffer, sizeof(file_buffer))) {
+                send(client_fd, file_buffer, sizeof(file_buffer), 0);
+            }
+            send(client_fd, file_buffer, file.gcount(), 0);
+        }
+        else {
+            std::string error_response = error_message + contentType + "\r\n";
+            send(client_fd, error_response.c_str(), error_response.size(), 0);
+        }
+    }
     else {
         // Error response
         std::string error_response = error_message + contentType + "\r\n";
@@ -104,6 +131,13 @@ void handleClient(int client_fd) {
 int main(int argc, char** argv) {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
+
+    std::string dir;
+
+    if (argc > 2 && std::string(argv[1]) == "--directory") {
+        dir = argv[2];
+        std::cout << "Accepted argument: " << dir << "\n";
+    }
 
     std::cout << "Logs from your program will appear here!\n";
 
@@ -149,7 +183,7 @@ int main(int argc, char** argv) {
             continue;
         }
         std::cout << "Client connected\n";
-        std::thread(handleClient, client_fd).detach(); // Create and detach thread
+        std::thread(handleClient, client_fd, dir).detach(); // Create and detach thread
     }
 
     close(server_fd);
