@@ -88,13 +88,7 @@ void handleClient(int client_fd, const std::string& dir) {
         }
     }
     else if (method == "POST") {
-        // Accept text from client and create new file with accepted text
-        // --directory flag will specify the directory to create the file in (absolute path)
-        // Included parts:
-        // Content-Type : application/octet-stream
-        // Content-Length : size of body in bytes
-        // Body : contains the text
-        // File name is in POST request ex: POST /files/{filename}
+        // Post response
         std::string body = extractBody(request);
         std::cout << "Body extracted: " << body << "\n";
         std::string file_name = path.substr(7);
