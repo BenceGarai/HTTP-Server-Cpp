@@ -9,14 +9,17 @@
 #include <netdb.h>
 #include <thread>
 #include <fstream>
+#include <filesystem>
 
 std::string extractHeader(const std::string& request, const std::string& header_name);
 std::string extractMethod(const std::string& request);
 std::string extractPath(const std::string& request);
+std::string extractBody(const std::string& request);
 
 void handleClient(int client_fd, const std::string& dir) {
     std::string ok_message = "HTTP/1.1 200 OK\r\n";
     std::string error_message = "HTTP/1.1 404 Not Found\r\n";
+    std::string post_created_message = "HTTP/1.1 201 Created\r\n";
 
     char buffer[1024];
     int received_bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
@@ -83,6 +86,28 @@ void handleClient(int client_fd, const std::string& dir) {
             std::string error_response = error_message + contentType + "\r\n";
             send(client_fd, error_response.c_str(), error_response.size(), 0);
         }
+    }
+    else if (method == "POST") {
+        // Accept text from client and create new file with accepted text
+        // --directory flag will specify the directory to create the file in (absolute path)
+        // Included parts:
+        // Content-Type : application/octet-stream
+        // Content-Length : size of body in bytes
+        // Body : contains the text
+        // File name is in POST request ex: POST /files/{filename}
+        std::string body = extractBody(request);
+        std::cout << "Body extracted: " << body << "\n";
+        std::string file_name = path.substr(7);
+        std::cout << "File name extracted: " << file_name << "\n";
+
+        std::filesystem::create_directory(dir);
+        std::cout << "Directory created with path: " << dir << "\n";
+        std::string full_path = dir + file_name;
+        std::ofstream file(full_path);
+        file << body;
+        std::cout << "File created full path: " << full_path << "\n";
+        std::string post_response = post_created_message + "\r\n";
+        send(client_fd, post_response.c_str(), post_response.size(), 0);
     }
     else {
         // Error response
@@ -186,5 +211,13 @@ std::string extractPath(const std::string& request) {
         }
     }
     return "";
+}
+
+std::string extractBody(const std::string& request) {
+    size_t body_start = request.find("\r\n\r\n");
+    if (body_start != std::string::npos) {
+        body_start += 4;
+        return request.substr(body_start);
+    }
 }
 
