@@ -46,13 +46,14 @@ void handleClient(int client_fd, const std::string& dir) {
         std::string echo_message = path.substr(6);
         int conLen = echo_message.length();
         std::string contentCheck = extractHeader(request, "Accept-Encoding: ");
-        std::string response_message = "";
-        if (contentCheck == "gzip") {
+        if (contentCheck.find("gzip") != std::string::npos) {
             std::string response_message = ok_message + contentEncoding + contentType + "Content-Length: " + std::to_string(conLen) + "\r\n\r\n" + echo_message;
+            std::cout << "Sending gzip message: " << response_message << "\n";
             send(client_fd, response_message.c_str(), response_message.size(), 0);
         }
         else {
             std::string response_message = ok_message + contentType + "Content-Length: " + std::to_string(conLen) + "\r\n\r\n" + echo_message;
+            std::cout << "Sending non-gzip message: " << response_message << "\n";
             send(client_fd, response_message.c_str(), response_message.size(), 0);
         }
     }
