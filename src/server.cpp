@@ -49,11 +49,12 @@ void handleClient(int client_fd, const std::string& dir) {
         std::string response_message = "";
         if (contentCheck == "gzip") {
             std::string response_message = ok_message + contentEncoding + contentType + "Content-Length: " + std::to_string(conLen) + "\r\n\r\n" + echo_message;
+            send(client_fd, response_message.c_str(), response_message.size(), 0);
         }
         else {
             std::string response_message = ok_message + contentType + "Content-Length: " + std::to_string(conLen) + "\r\n\r\n" + echo_message;
+            send(client_fd, response_message.c_str(), response_message.size(), 0);
         }
-        send(client_fd, response_message.c_str(), response_message.size(), 0);
     }
     else if (method == "GET" && path == "/user-agent") {
         // User-Agent response
