@@ -10,11 +10,13 @@
 #include <thread>
 #include <fstream>
 #include <filesystem>
+#include <zlib.h>
 
 std::string extractHeader(const std::string& request, const std::string& header_name);
 std::string extractMethod(const std::string& request);
 std::string extractPath(const std::string& request);
 std::string extractBody(const std::string& request);
+std::string compress_string(const std::string& str, int compressionlevel = Z_BEST_COMPRESSION);
 
 void handleClient(int client_fd, const std::string& dir) {
     std::string ok_message = "HTTP/1.1 200 OK\r\n";
@@ -44,6 +46,7 @@ void handleClient(int client_fd, const std::string& dir) {
     else if (method == "GET" && path.rfind("/echo/", 0) == 0) {
         // Echo response
         std::string echo_message = path.substr(6);
+        echo_message = compress_string(echo_message);
         int conLen = echo_message.length();
         std::string contentCheck = extractHeader(request, "Accept-Encoding: ");
         if (contentCheck.find("gzip") != std::string::npos) {
@@ -222,5 +225,53 @@ std::string extractBody(const std::string& request) {
         body_start += 4;
         return request.substr(body_start);
     }
+}
+
+std::string compress_string(const std::string& str, int compressionlevel = Z_BEST_COMPRESSION) {
+
+    z_stream zs;
+
+    memset(&zs, 0, sizeof(zs));
+
+    if (deflateInit2(&zs, compressionlevel, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY) != Z_OK)
+
+        throw(std::runtime_error("deflateInit failed while compressing."));
+
+    zs.next_in = (Bytef*)str.data();
+
+    zs.avail_in = str.size();
+
+    int ret;
+
+    char outbuffer[32768];
+
+    std::string outstring;
+
+    do {
+
+        zs.next_out = reinterpret_cast<Bytef*>(outbuffer);
+
+        zs.avail_out = sizeof(outbuffer);
+
+        ret = deflate(&zs, Z_FINISH);
+
+        if (outstring.size() < zs.total_out) {
+
+            outstring.append(outbuffer, zs.total_out - outstring.size());
+
+        }
+
+    } while (ret == Z_OK);
+
+    deflateEnd(&zs);
+
+    if (ret != Z_STREAM_END) {
+
+        throw(std::runtime_error("Exception during zlib compression: " + std::to_string(ret)));
+
+    }
+
+    return outstring;
+
 }
 
