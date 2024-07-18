@@ -19,7 +19,7 @@ std::string extractBody(const std::string& request);
 void handleClient(int client_fd, const std::string& dir) {
     std::string ok_message = "HTTP/1.1 200 OK\r\n";
     std::string error_message = "HTTP/1.1 404 Not Found\r\n";
-    std::string post_created_message = "HTTP/1.1 201 Created\r\n";
+    std::string created_message = "HTTP/1.1 201 Created\r\n";
 
     char buffer[1024];
     int received_bytes = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
@@ -34,6 +34,7 @@ void handleClient(int client_fd, const std::string& dir) {
     std::string path = extractPath(request);
     std::cout << "Path found: " << path << "\n";
     std::string contentType = "Content-Type: text/plain\r\n";
+    std::string contentEncoding = "Content-Encoding: gzip\r\n";
 
     if (method == "GET" && path == "/") {
         // Default message
@@ -44,8 +45,14 @@ void handleClient(int client_fd, const std::string& dir) {
         // Echo response
         std::string echo_message = path.substr(6);
         int conLen = echo_message.length();
-        std::string response_message = ok_message + contentType + "Content-Length: " + std::to_string(conLen) + "\r\n\r\n" + echo_message;
-        std::cout << "Message sent: " << response_message << "\n";
+        std::string contentCheck = extractHeader(request, "Accept-Encoding: ");
+        std::string response_message = "";
+        if (contentCheck == "gzip") {
+            std::string response_message = ok_message + contentEncoding + contentType + "Content-Length: " + std::to_string(conLen) + "\r\n\r\n" + echo_message;
+        }
+        else {
+            std::string response_message = ok_message + contentType + "Content-Length: " + std::to_string(conLen) + "\r\n\r\n" + echo_message;
+        }
         send(client_fd, response_message.c_str(), response_message.size(), 0);
     }
     else if (method == "GET" && path == "/user-agent") {
@@ -66,7 +73,7 @@ void handleClient(int client_fd, const std::string& dir) {
         // File response
         std::string filename = dir + path.substr(7); // Extract the filename
         std::ifstream file(filename, std::ios::binary);
-        std::cout << "Here is the filename: " << filename << "\n";
+        std::cout << "Filename: " << filename << "\n";
 
         if (file) {
             file.seekg(0, std::ios::end);
@@ -100,7 +107,7 @@ void handleClient(int client_fd, const std::string& dir) {
         std::ofstream file(full_path);
         file << body;
         std::cout << "File created full path: " << full_path << "\n";
-        std::string post_response = post_created_message + "\r\n";
+        std::string post_response = created_message + "\r\n";
         send(client_fd, post_response.c_str(), post_response.size(), 0);
     }
     else {
